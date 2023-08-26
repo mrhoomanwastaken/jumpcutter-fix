@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from audiotsm import phasevocoder
 from audiotsm.io.array import ArrayReader, ArrayWriter
 from scipy.io import wavfile
@@ -34,8 +35,10 @@ def _is_valid_input_file(filename) -> bool:
     :return: True if it is a file with an audio stream attached.
     """
 
-    command = 'ffprobe -i "{}" -hide_banner -loglevel error -select_streams a' \
-              ' -show_entries stream=codec_type'.format(filename)
+    command = [
+        'ffprobe', '-i', filename, '-hide_banner', '-loglevel', 'error',
+        '-select_streams', 'a', '-show_entries', 'stream=codec_type'
+    ]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     outs, errs = None, None
     try:
@@ -77,7 +80,7 @@ def _delete_path(s):  # Dangerous! Watch out!
 
 # TODO maybe transition to use the time=... instead of frame=... as frame is not accessible when exporting audio only
 def _run_timed_ffmpeg_command(command, **kwargs):
-    p = subprocess.Popen( f"{FFMPEG_PATH} {command}", stderr=subprocess.PIPE, universal_newlines=True, bufsize=1)
+    p = subprocess.Popen([FFMPEG_PATH, *command], stderr=subprocess.PIPE, universal_newlines=True, bufsize=1)
 
     with tqdm(**kwargs) as t:
         while p.poll() is None:
@@ -151,8 +154,10 @@ def speed_up_video(
     _create_path(temp_folder)
 
     # Find out framerate and duration of the input video
-    command = 'ffprobe -i "{}" -hide_banner -loglevel error -select_streams v' \
-              ' -show_entries format=duration:stream=avg_frame_rate'.format(input_file)
+    command = [
+        'ffprobe', '-i', input_file, '-hide_banner', '-loglevel', 'error',
+        '-select_streams', 'v', '-show_entries', 'format=duration:stream=avg_frame_rate'
+    ]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True)
     std_out, err = p.communicate()
     match_frame_rate = re.search(r'frame_rate=(\d*)/(\d*)', str(std_out))
@@ -167,10 +172,14 @@ def speed_up_video(
         # print(f'Found Duration {original_duration}')
 
     # Extract the audio
-    command = '-i "{}" -ab 160k -ac 2 -ar {} -vn {} -hide_banner' \
-        .format(input_file,
-                sample_rate,
-                temp_folder + '/audio.wav')
+    command = [
+        '-i', input_file,
+        '-ab', '160k',
+        '-ac', '2',
+        '-ar', str(sample_rate),
+        '-vn', temp_folder + '/audio.wav',
+        '-hide_banner'
+    ]
 
     _run_timed_ffmpeg_command(command, total=int(original_duration * frame_rate), unit='frames',
                               desc='Extracting audio:')
@@ -249,12 +258,20 @@ def speed_up_video(
     filter_graph_file.write(expression.replace(',', '\\,'))
     filter_graph_file.close()
 
-    command = '-i "{}" -i "{}" -filter_script:v "{}" -map 0 -map -0:a -map 1:a -c:a aac "{}"' \
-              ' -loglevel warning -stats -y -hide_banner' \
-        .format(input_file,
-                temp_folder + '/audioNew.wav',
-                temp_folder + '/filterGraph.txt',
-                output_file)
+    command = [
+        '-i', input_file,
+        '-i', temp_folder + '/audioNew.wav',
+        '-filter_script:v', temp_folder + '/filterGraph.txt',
+        '-map', '0',
+        '-map', '-0:a',
+        '-map', '1:a',
+        '-c:a', 'aac',
+        output_file,
+        '-loglevel', 'warning',
+        '-stats',
+        '-y',
+        '-hide_banner'
+    ]
 
     _run_timed_ffmpeg_command(command, total=chunks[-1][3], unit='frames', desc='Generating final:')
 
