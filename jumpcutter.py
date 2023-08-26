@@ -1,4 +1,4 @@
-#!/bin/env python3
+#!/usr/bin/env python
 from audiotsm import phasevocoder
 from audiotsm.io.array import ArrayReader, ArrayWriter
 from scipy.io import wavfile
@@ -35,8 +35,10 @@ def _is_valid_input_file(filename) -> bool:
     :return: True if it is a file with an audio stream attached.
     """
 
-    command = ['ffprobe', '-i', filename] + '-hide_banner -loglevel error -select_streams a' \
-              ' -show_entries stream=codec_type'.split(' ')
+    command = [
+        'ffprobe', '-i', filename, '-hide_banner', '-loglevel', 'error',
+        '-select_streams', 'a', '-show_entries', 'stream=codec_type'
+    ]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     outs, errs = None, None
     try:
@@ -152,8 +154,10 @@ def speed_up_video(
     _create_path(temp_folder)
 
     # Find out framerate and duration of the input video
-    command = ['ffprobe', '-i', input_file] + '-hide_banner -loglevel error -select_streams v' \
-              ' -show_entries format=duration:stream=avg_frame_rate'.split(' ')
+    command = [
+        'ffprobe', '-i', input_file, '-hide_banner', '-loglevel', 'error',
+        '-select_streams', 'v', '-show_entries', 'format=duration:stream=avg_frame_rate'
+    ]
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True)
     std_out, err = p.communicate()
     match_frame_rate = re.search(r'frame_rate=(\d*)/(\d*)', str(std_out))
@@ -263,7 +267,7 @@ def speed_up_video(
         '-map', '1:a',
         '-c:a', 'aac',
         output_file,
-        '-loglevel', 'warning'
+        '-loglevel', 'warning',
         '-stats',
         '-y',
         '-hide_banner'
