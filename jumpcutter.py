@@ -262,7 +262,7 @@ def speed_up_video(
         '-i', input_file,
         '-i', temp_folder + '/audioNew.wav',
         '-filter_script:v', temp_folder + '/filterGraph.txt',
-        '-map', '0',
+        '-map', '0:v',
         '-map', '-0:a',
         '-map', '1:a',
         '-c:a', 'aac',
